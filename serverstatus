@@ -1,0 +1,152 @@
+#!/usr/bin/env python3
+
+import requests
+import psutil
+import socket
+import os
+import pwd
+
+
+def load_env(filepath):
+    """Load environment variables from a file."""
+    env_vars = {}
+    try:
+        with open(filepath) as f:
+            for line in f:
+                if line.strip() and not line.startswith("#"):
+                    key, value = line.strip().split("=", 1)
+                    # Remove surrounding quotes if present
+                    if value.startswith('"') and value.endswith('"'):
+                        value = value[1:-1]
+                    env_vars[key] = value.strip()
+    except FileNotFoundError:
+        print(f"Environment file {filepath} not found.")
+    except Exception as e:
+        print(f"Error reading environment file: {e}")
+    return env_vars
+
+
+env_vars = load_env("/etc/server-status.env")
+TOKEN = env_vars.get("TOKEN", "")
+CHAT_ID = env_vars.get("CHAT_ID", "")
+
+
+def get_private_ips_and_interfaces():
+    """Retrieve private IPs and interfaces."""
+    ip_info = []
+    for interface, addrs in psutil.net_if_addrs().items():
+        for addr in addrs:
+            if addr.family == socket.AF_INET and not addr.address.startswith("127."):
+                ip_info.append(f"{interface}: {addr.address}/{addr.netmask}")
+    return "\n".join(ip_info)
+
+
+def get_active_user():
+    """Retrieve the active user."""
+    return pwd.getpwuid(os.geteuid()).pw_name
+
+
+def get_ram_info():
+    """Retrieve RAM information."""
+    virtual_memory = psutil.virtual_memory()
+    return f"Total: {virtual_memory.total // (1024**3)}GB, Used: {virtual_memory.used // (1024**3)}GB, Free: {virtual_memory.available // (1024**3)}GB"
+
+
+def get_storage_info():
+    """Retrieve storage information with corrected sizes."""
+    partitions = psutil.disk_partitions()
+    storage_info = []
+    for partition in partitions:
+        try:
+            usage = psutil.disk_usage(partition.mountpoint)
+            # Sizes in GiB
+            total_gb = usage.total // (1024**3)
+            free_gb = usage.free // (1024**3)
+            total_used_percent = usage.percent
+            used_gb = total_gb - free_gb
+
+            # Check if the total size is less than 1 GiB, fallback to MiB
+            if total_gb == 0:
+                total_mb = usage.total // (1024**2)
+                free_mb = usage.free // (1024**2)
+                used_mb = total_mb - free_mb
+                unit = "MB"
+                storage_info.append(
+                    f"{partition.device}: Used: {free_mb}/{total_mb} {unit} ({total_used_percent}%)"
+                )
+            else:
+                unit = "GB"
+                storage_info.append(
+                    f"{partition.device} Used: {used_gb}/{total_gb} {unit} ({total_used_percent}%)"
+                )
+        except Exception as e:
+            storage_info.append(f"{partition.device} Error: {str(e)}")
+    return "\n".join(storage_info)
+
+
+def get_cpu_usage():
+    """Retrieve CPU usage."""
+    return f"{psutil.cpu_percent()}%"
+
+
+def get_server_load():
+    """Retrieve server load."""
+    load1, load5, load15 = os.getloadavg()
+    load1 = f"{load1:.2f}"
+    load5 = f"{load5:.2f}"
+    load15 = f"{load15:.2f}"
+    return f"{load1}, {load5}, {load15}"
+
+
+def escape_html(text):
+    """Escape HTML special characters."""
+    return (
+        text.replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+        .replace('"', "&quot;")
+    )
+
+
+def format_message():
+    """Format the server status message as HTML."""
+    private_ips_and_interfaces = get_private_ips_and_interfaces()
+    active_user = get_active_user()
+    ram_info = get_ram_info()
+    storage_info = get_storage_info()
+    cpu_usage = get_cpu_usage()
+    server_load = get_server_load()
+
+    message = (
+        "<b>Server Status</b>\n\n"
+        f"<b>Active User:</b> {escape_html(active_user)}\n"
+        f"<b>Server Load:</b> {escape_html(server_load)}\n"
+        f"<b>CPU Usage:</b> {escape_html(cpu_usage)}\n"
+        f"<b>RAM Info:</b> {escape_html(ram_info)}\n\n"
+        f"<b>Private IPs and Interfaces:</b>\n<blockquote>{escape_html(private_ips_and_interfaces)}</blockquote>\n"
+        f"<b>Storage Information:</b>\n<blockquote>{escape_html(storage_info)}</blockquote>"
+    )
+    return message
+
+
+def send_message(message):
+    """Send a message to the Telegram channel."""
+    url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
+    response = requests.post(
+        url, data={"chat_id": CHAT_ID, "text": message, "parse_mode": "HTML"}
+    )
+
+    if response.status_code != 200:
+        print(f"Error sending message: {response.status_code}, {response.text}")
+    else:
+        print("Message sent successfully")
+
+
+def main():
+    message = format_message()
+    print(f"Sending message:\n{message}\n")
+    send_message(message)
+
+
+if __name__ == "__main__":
+    main()

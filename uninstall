@@ -1,0 +1,31 @@
+#!/bin/bash
+
+# Define paths and filenames
+SERVICE_FILE="server-status.service"
+TIMER_FILE="server-status.timer"
+SCRIPT_FILE="serverstatus"
+ENV_FILE="/etc/server-status.env"
+
+# Destination paths
+SYSTEMD_SERVICE_PATH="/etc/systemd/system"
+SCRIPT_DEST="/usr/local/bin"
+
+# Stop and disable the timer
+echo "Stopping and disabling the timer..."
+systemctl disable --now server-status.timer
+
+# Remove the service and timer files
+echo "Removing systemd service and timer..."
+rm -f $SYSTEMD_SERVICE_PATH/$SERVICE_FILE
+rm -f $SYSTEMD_SERVICE_PATH/$TIMER_FILE
+
+# Remove the Python script
+echo "Removing the Python script..."
+rm -f $SCRIPT_DEST/$SCRIPT_FILE
+
+# Optional: Remove the environment file
+echo "Removing environment file (optional)..."
+rm -f $ENV_FILE
+
+echo "Uninstallation completed."
+

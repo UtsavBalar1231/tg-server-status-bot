@@ -1,0 +1,6 @@
+[Unit]
+Description=Server Status Bot Service
+
+[Service]
+ExecStart=/usr/bin/python3 /usr/local/bin/serverstatus
+

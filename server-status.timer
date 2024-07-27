@@ -1,0 +1,11 @@
+[Unit]
+Description=Run Telegran Server Status Timer
+
+[Timer]
+OnBootSec=10min
+OnUnitActiveSec=10min
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+

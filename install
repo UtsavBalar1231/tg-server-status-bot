@@ -1,0 +1,38 @@
+#!/bin/bash
+
+# Define paths and filenames
+SERVICE_FILE="server-status.service"
+TIMER_FILE="server-status.timer"
+SCRIPT_FILE="serverstatus"
+ENV_FILE="/etc/server-status.env"
+
+# Destination paths
+SYSTEMD_SERVICE_PATH="/etc/systemd/system"
+SCRIPT_DEST="/usr/local/bin"
+
+# Install the Python script
+echo "Installing the Python script..."
+cp $SCRIPT_FILE $SCRIPT_DEST/
+chmod +x $SCRIPT_DEST/$SCRIPT_FILE
+
+# Install the service and timer files
+echo "Installing systemd service and timer..."
+cp $SERVICE_FILE $SYSTEMD_SERVICE_PATH/
+cp $TIMER_FILE $SYSTEMD_SERVICE_PATH/
+
+# Enable and start the timer
+echo "Enabling and starting the timer..."
+systemctl enable --now server-status.timer
+
+# Create the environment file if it doesn't exist
+if [ ! -f $ENV_FILE ]; then
+    echo "Creating environment file at $ENV_FILE..."
+    echo 'TOKEN="your-telegram-bot-token"' > $ENV_FILE
+    echo 'CHAT_ID="your-chat-id"' >> $ENV_FILE
+    echo "Please edit $ENV_FILE to set your TOKEN and CHAT_ID."
+else
+    echo "$ENV_FILE already exists. Please ensure it has the correct TOKEN and CHAT_ID."
+fi
+
+echo "Installation completed."
+
