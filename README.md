@@ -9,6 +9,7 @@ Server Status Bot is a Python script that monitors server metrics and sends stat
   - RAM usage
   - Disk usage
   - Active user
+  - Hostname
   - Private IP addresses
   - Server load
 
@@ -26,8 +27,8 @@ Server Status Bot is a Python script that monitors server metrics and sends stat
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/yourusername/server-status-bot.git
-cd server-status-bot
+git clone https://github.com/UtsavBalar1231/tg-server-status-bot.git
+cd tg-server-status-bot
 ```
 
 ### 2. Install Dependencies

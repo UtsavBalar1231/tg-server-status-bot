@@ -98,6 +98,11 @@ def get_server_load():
     return f"{load1}, {load5}, {load15}"
 
 
+def get_hostname():
+    """Retrieve the hostname."""
+    return socket.gethostname()
+
+
 def escape_html(text):
     """Escape HTML special characters."""
     return (
@@ -112,6 +117,7 @@ def format_message():
     """Format the server status message as HTML."""
     private_ips_and_interfaces = get_private_ips_and_interfaces()
     active_user = get_active_user()
+    hostname = get_hostname()
     ram_info = get_ram_info()
     storage_info = get_storage_info()
     cpu_usage = get_cpu_usage()
@@ -120,6 +126,7 @@ def format_message():
     message = (
         "<b>Server Status</b>\n\n"
         f"<b>Active User:</b> {escape_html(active_user)}\n"
+        f"<b>Hostname:</b> {escape_html(hostname)}\n"
         f"<b>Server Load:</b> {escape_html(server_load)}\n"
         f"<b>CPU Usage:</b> {escape_html(cpu_usage)}\n"
         f"<b>RAM Info:</b> {escape_html(ram_info)}\n\n"
