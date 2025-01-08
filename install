@@ -11,28 +11,43 @@ SYSTEMD_SERVICE_PATH="/etc/systemd/system"
 SCRIPT_DEST="/usr/local/bin"
 
 # Install the Python script
-echo "Installing the Python script..."
-cp $SCRIPT_FILE $SCRIPT_DEST/
-chmod +x $SCRIPT_DEST/$SCRIPT_FILE
+if [ ! -f $SCRIPT_DEST/$SCRIPT_FILE ] || ! cmp -s $SCRIPT_FILE $SCRIPT_DEST/$SCRIPT_FILE; then
+	echo "Installing the Python script..."
+	cp $SCRIPT_FILE $SCRIPT_DEST/
+	chmod +x $SCRIPT_DEST/$SCRIPT_FILE
+fi
 
 # Install the service and timer files
-echo "Installing systemd service and timer..."
-cp $SERVICE_FILE $SYSTEMD_SERVICE_PATH/
-cp $TIMER_FILE $SYSTEMD_SERVICE_PATH/
+if [ ! -f $SERVICE_FILE ] || ! cmp -s $SERVICE_FILE $SYSTEMD_SERVICE_PATH/$SERVICE_FILE; then
+	echo "Installing systemd service and timer..."
+	cp $SERVICE_FILE $SYSTEMD_SERVICE_PATH/
+fi
+if [ ! -f $TIMER_FILE ] || ! cmp -s $TIMER_FILE $SYSTEMD_SERVICE_PATH/$TIMER_FILE; then
+	cp $TIMER_FILE $SYSTEMD_SERVICE_PATH/
+fi
 
 # Enable and start the timer
-echo "Enabling and starting the timer..."
-systemctl enable --now server-status.timer
+if ! systemctl is-enabled --quiet server-status.timer; then
+	echo "Enabling and starting the timer..."
+	systemctl enable --now server-status.timer
+fi
 
 # Create the environment file if it doesn't exist
 if [ ! -f $ENV_FILE ]; then
-    echo "Creating environment file at $ENV_FILE..."
-    echo 'TOKEN="your-telegram-bot-token"' > $ENV_FILE
-    echo 'CHAT_ID="your-chat-id"' >> $ENV_FILE
-    echo "Please edit $ENV_FILE to set your TOKEN and CHAT_ID."
+	echo "Creating environment file at $ENV_FILE..."
+	echo 'TOKEN="your-telegram-bot-token"' >$ENV_FILE
+	echo 'CHAT_ID="your-chat-id"' >>$ENV_FILE
+	echo "Please edit $ENV_FILE to set your TOKEN and CHAT_ID."
 else
-    echo "$ENV_FILE already exists. Please ensure it has the correct TOKEN and CHAT_ID."
+	if ! grep -q "TOKEN" $ENV_FILE || ! grep -q "CHAT_ID" $ENV_FILE; then
+		echo "Invalid $ENV_FILE! Please edit $ENV_FILE to set your TOKEN and CHAT_ID."
+		exit 1
+	elif grep -q "your-telegram-bot-token" $ENV_FILE || grep -q "your-chat-id" $ENV_FILE; then
+		echo "Default values found in $ENV_FILE. Please edit $ENV_FILE to set your TOKEN and CHAT_ID."
+		exit 1
+	else
+		echo "Environment file already exists and is properly configured."
+	fi
 fi
 
 echo "Installation completed."
-
